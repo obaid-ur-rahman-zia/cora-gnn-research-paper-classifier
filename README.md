@@ -1,5 +1,7 @@
 # Cora GCN Research Paper Classifier
 
+![Research papers linked by citations](docs/cover.png)
+
 An interactive Graph Neural Network project for classifying research papers from the Cora citation network into seven topic categories. The trained SimpleGCN model is exported to ONNX and served through a FastAPI inference API, with a browser UI for exploring real Cora nodes, custom graph inputs, model metadata, and latency.
 
 ## What This Project Does
@@ -23,19 +25,19 @@ Supported topic classes:
 
 ## UI Screenshots
 
-### Cora Benchmark Explorer
+### Papers
 
-Select any Cora node index from 0 to 2707 and run GCN inference. The UI shows the predicted topic, confidence score, class probabilities, raw logits, and a local citation context visualization.
+Select any Cora node index from 0 to 2707 and run GCN inference. The UI shows the predicted topic, confidence score, class probabilities, raw logits, and an illustrative node diagram.
 
 ![Cora Benchmark Explorer](docs/screenshots/cora-explorer.png)
 
-### Custom Graph Predictor
+### Custom Graph
 
 Generate or edit a custom citation graph payload, then send it to the API through `POST /predict`.
 
 ![Custom Graph Predictor](docs/screenshots/custom-graph-predictor.png)
 
-### ONNX Model and Latency Benchmark
+### Model and Latency
 
 View ONNX input/output metadata and run a small latency benchmark against the prediction endpoint.
 

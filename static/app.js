@@ -1,12 +1,12 @@
 // Topic Class Colors & Icons
 const TOPIC_CONFIG = {
-  "Neural_Networks": { color: "#6366f1", icon: "fa-brain" },
-  "Probabilistic_Methods": { color: "#06b6d4", icon: "fa-chart-column" },
-  "Reinforcement_Learning": { color: "#10b981", icon: "fa-robot" },
-  "Theory": { color: "#f59e0b", icon: "fa-book-open" },
-  "Genetic_Algorithms": { color: "#ec4899", icon: "fa-dna" },
-  "Rule_Learning": { color: "#8b5cf6", icon: "fa-scale-balanced" },
-  "Case_Based": { color: "#f43f5e", icon: "fa-briefcase" }
+  "Neural_Networks": { color: "#87c9b5", icon: "fa-brain" },
+  "Probabilistic_Methods": { color: "#9bbbd1", icon: "fa-chart-column" },
+  "Reinforcement_Learning": { color: "#b7cd8f", icon: "fa-robot" },
+  "Theory": { color: "#d9bb85", icon: "fa-book-open" },
+  "Genetic_Algorithms": { color: "#d9a8a0", icon: "fa-dna" },
+  "Rule_Learning": { color: "#b8a8d0", icon: "fa-scale-balanced" },
+  "Case_Based": { color: "#c4b28e", icon: "fa-briefcase" }
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -27,14 +27,13 @@ async function initHealthCheck() {
     const data = await res.json();
     if (data.status === "healthy") {
       statusText.textContent = "ONNX Model Online";
-      statusBadge.style.borderColor = "rgba(16, 185, 129, 0.4)";
     } else {
       statusText.textContent = "Model Offline";
-      statusBadge.querySelector(".status-dot").style.backgroundColor = "#f43f5e";
+      statusBadge.querySelector(".status-dot").style.backgroundColor = "#e58e83";
     }
   } catch (err) {
     statusText.textContent = "API Disconnected";
-    statusBadge.querySelector(".status-dot").style.backgroundColor = "#f43f5e";
+    statusBadge.querySelector(".status-dot").style.backgroundColor = "#e58e83";
   }
 }
 
@@ -48,6 +47,7 @@ function initTabs() {
       const tabId = btn.getAttribute("data-tab");
       
       tabBtns.forEach(b => b.classList.remove("active"));
+      tabBtns.forEach(b => b.setAttribute("aria-selected", b === btn ? "true" : "false"));
       tabContents.forEach(c => c.classList.remove("active"));
 
       btn.classList.add("active");
@@ -68,7 +68,10 @@ function initCoraExplorer() {
     if (!isNaN(nodeId) && nodeId >= 0 && nodeId <= 2707) {
       predictCoraNode(nodeId);
     } else {
-      alert("Please enter a valid node ID between 0 and 2707.");
+      const errorMessage = document.getElementById("cora-error");
+      errorMessage.textContent = "Enter a node ID from 0 to 2707.";
+      errorMessage.classList.remove("hidden");
+      nodeInput.focus();
     }
   });
 
@@ -99,8 +102,10 @@ async function predictCoraNode(nodeId) {
   const probBarsList = document.getElementById("prob-bars-list");
   const rawLogitsCode = document.getElementById("raw-logits-code");
   const graphNodeCount = document.getElementById("graph-node-count");
+  const errorMessage = document.getElementById("cora-error");
 
-  graphNodeCount.textContent = `Node #${nodeId} Citation Context`;
+  graphNodeCount.textContent = `Node #${nodeId} / schematic`;
+  errorMessage.classList.add("hidden");
 
   try {
     const res = await fetch("/predict/cora_node", {
@@ -118,7 +123,7 @@ async function predictCoraNode(nodeId) {
     resultsContainer.classList.remove("hidden");
 
     const topicName = pred.predicted_class_name;
-    const topicCfg = TOPIC_CONFIG[topicName] || { color: "#6366f1", icon: "fa-graduation-cap" };
+    const topicCfg = TOPIC_CONFIG[topicName] || { color: "#87c9b5", icon: "fa-graduation-cap" };
     
     // Set Header Card
     predTopicName.textContent = topicName.replace(/_/g, " ");
@@ -148,7 +153,7 @@ async function predictCoraNode(nodeId) {
     paired.sort((a, b) => b.prob - a.prob);
 
     paired.forEach(item => {
-      const cfg = TOPIC_CONFIG[item.name] || { color: "#6366f1" };
+      const cfg = TOPIC_CONFIG[item.name] || { color: "#87c9b5" };
       const pctStr = (item.prob * 100).toFixed(1);
 
       const probItem = document.createElement("div");
@@ -177,7 +182,8 @@ async function predictCoraNode(nodeId) {
 
   } catch (err) {
     console.error("Prediction failed:", err);
-    alert(`Failed to get GCN prediction for node ${nodeId}: ${err.message}`);
+    errorMessage.textContent = `Could not classify paper #${nodeId}. Check the API connection and try again. (${err.message})`;
+    errorMessage.classList.remove("hidden");
   }
 }
 
@@ -211,7 +217,7 @@ function drawCitationGraph(centralNodeId, nodeColor) {
   // Draw Edge Lines
   ctx.lineWidth = 1.5;
   neighbors.forEach(n => {
-    ctx.strokeStyle = "rgba(99, 102, 241, 0.35)";
+    ctx.strokeStyle = "#526d66";
     ctx.beginPath();
     ctx.moveTo(centerX, centerY);
     ctx.lineTo(n.x, n.y);
@@ -220,32 +226,29 @@ function drawCitationGraph(centralNodeId, nodeColor) {
 
   // Draw Central Node
   ctx.fillStyle = nodeColor;
-  ctx.shadowColor = nodeColor;
-  ctx.shadowBlur = 15;
   ctx.beginPath();
   ctx.arc(centerX, centerY, 18, 0, 2 * Math.PI);
   ctx.fill();
-  ctx.shadowBlur = 0;
 
   // Central Node Label
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 11px Inter, sans-serif";
+  ctx.font = "bold 11px IBM Plex Mono, monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(`#${centralNodeId}`, centerX, centerY);
 
   // Draw Neighbor Nodes
   neighbors.forEach(n => {
-    ctx.fillStyle = "rgba(30, 41, 59, 0.9)";
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.fillStyle = "#28363a";
+    ctx.strokeStyle = "#60726f";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.arc(n.x, n.y, 12, 0, 2 * Math.PI);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "10px Inter, sans-serif";
+    ctx.fillStyle = "#c1ccc8";
+    ctx.font = "10px IBM Plex Mono, monospace";
     ctx.fillText(`#${n.id}`, n.x, n.y);
   });
 }
@@ -302,6 +305,8 @@ function initCustomPredictor() {
   btnPredictCustom.addEventListener("click", async () => {
     const resultsWrapper = document.getElementById("custom-results-wrapper");
     const resultsGrid = document.getElementById("custom-nodes-results-grid");
+    const errorMessage = document.getElementById("custom-error");
+    errorMessage.classList.add("hidden");
 
     try {
       const payload = JSON.parse(payloadEditor.value);
@@ -322,12 +327,12 @@ function initCustomPredictor() {
 
       data.predictions.forEach(pred => {
         const topicName = pred.predicted_class_name;
-        const cfg = TOPIC_CONFIG[topicName] || { color: "#6366f1", icon: "fa-file" };
+        const cfg = TOPIC_CONFIG[topicName] || { color: "#87c9b5", icon: "fa-file" };
         const probs = pred.probabilities || pred.probabilites || [];
         const maxProb = probs.length ? Math.max(...probs) : 0;
 
         const card = document.createElement("div");
-        card.className = "card glass-card";
+        card.className = "card";
         card.innerHTML = `
           <div class="card-header">
             <h3><i class="fa-solid ${cfg.icon}" style="color: ${cfg.color}"></i> Paper #${pred.node_index + 1}</h3>
@@ -336,8 +341,8 @@ function initCustomPredictor() {
             <div style="font-size: 1.1rem; font-weight: 700; color: ${cfg.color}; margin-bottom: 0.5rem">
               ${topicName.replace(/_/g, " ")}
             </div>
-            <div style="font-size: 0.85rem; color: #9ca3af">
-              Confidence: <strong style="color: #10b981">${(maxProb * 100).toFixed(1)}%</strong>
+            <div style="font-size: 0.85rem; color: #a6b1af">
+              Confidence: <strong style="color: #87c9b5">${(maxProb * 100).toFixed(1)}%</strong>
             </div>
           </div>
         `;
@@ -345,7 +350,8 @@ function initCustomPredictor() {
       });
 
     } catch (err) {
-      alert(`Custom prediction error: ${err.message}`);
+      errorMessage.textContent = `Could not classify graph. ${err.message}`;
+      errorMessage.classList.remove("hidden");
     }
   });
 }
@@ -379,18 +385,19 @@ async function initModelInfo() {
 
   btnBenchmark.addEventListener("click", async () => {
     btnBenchmark.disabled = true;
-    btnBenchmark.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running Benchmark...';
+    btnBenchmark.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running...';
     benchMs.textContent = "Calculating...";
 
     const timings = [];
     try {
       for (let i = 0; i < 5; i++) {
         const start = performance.now();
-        await fetch("/predict/cora_node", {
+        const response = await fetch("/predict/cora_node", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ node_indices: [0, 10, 42, 100, 500] })
         });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const elapsed = performance.now() - start;
         timings.push(elapsed);
       }
@@ -398,15 +405,15 @@ async function initModelInfo() {
       const avgLatency = (timings.reduce((a, b) => a + b, 0) / timings.length).toFixed(2);
       benchMs.textContent = `${avgLatency} ms`;
       benchDetails.innerHTML = `
-        <p><i class="fa-solid fa-circle-check" style="color: #10b981"></i> Average end-to-end API response time over 5 runs: <strong>${avgLatency} ms</strong>.</p>
+        <p>Average across five requests: <strong>${avgLatency} ms</strong>.</p>
       `;
 
     } catch (err) {
       benchMs.textContent = "Error";
-      alert("Benchmark failed.");
+      benchDetails.textContent = `Benchmark failed. ${err.message}`;
     } finally {
       btnBenchmark.disabled = false;
-      btnBenchmark.innerHTML = '<i class="fa-solid fa-stopwatch"></i> Run Latency Benchmark';
+      btnBenchmark.innerHTML = '<i class="fa-solid fa-stopwatch"></i> Run benchmark';
     }
   });
 }
