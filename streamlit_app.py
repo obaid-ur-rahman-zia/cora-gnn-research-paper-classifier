@@ -7,6 +7,7 @@ Run with:
 """
 
 import json
+import os
 import random
 
 import requests
@@ -122,24 +123,20 @@ st.markdown(
 
 with st.sidebar:
     st.markdown("### Connection")
-    api_base = st.text_input("API base URL", value="https://cora-project.onrender.com").rstrip("/")
+    api_base = st.text_input(
+        "API base URL",
+        value=os.getenv("CORA_API_BASE_URL", "https://cora-gnn-research-paper-classifier.fastapicloud.dev"),
+    ).rstrip("/")
 
     if st.button("Check health", use_container_width=True):
-        st.session_state["_check_health"] = True
-
-    health_placeholder = st.empty()
-
-    def render_health():
         try:
             res = requests.get(f"{api_base}/health", timeout=5)
             res.raise_for_status()
             data = res.json()
             providers = ", ".join(data.get("providers", [])) or "ready"
-            health_placeholder.success(f"online · {providers}")
-        except Exception as exc:  # noqa: BLE001
-            health_placeholder.error(f"unreachable: {exc}")
-
-    render_health()
+            st.success(f"online · {providers}")
+        except requests.exceptions.RequestException as exc:
+            st.error(f"API unreachable: {exc}")
 
     st.markdown("---")
     st.markdown("### Model")
@@ -185,7 +182,11 @@ def render_predictions(data: dict):
         class_id = pred["predicted_class_id"]
         color = CLASS_COLORS[class_id]
         name = pred["predicted_class_name"].replace("_", " ")
-        conf = pred["probabilities"][class_id] * 100
+        probabilities = pred.get("probabilities", pred.get("probabilites"))
+        if probabilities is None or len(probabilities) != len(CORA_CLASSES):
+            st.error(f"Paper #{pred['node_index']}: API response has no valid class probabilities.")
+            continue
+        conf = probabilities[class_id] * 100
 
         with st.container():
             st.markdown(
@@ -205,7 +206,7 @@ def render_predictions(data: dict):
             df = pd.DataFrame(
                 {
                     "topic": [c.replace("_", " ") for c in CORA_CLASSES.values()],
-                    "probability": pred["probabilities"],
+                    "probability": probabilities,
                     "class_id": list(CORA_CLASSES.keys()),
                 }
             ).sort_values("probability", ascending=True)
@@ -232,9 +233,25 @@ def render_predictions(data: dict):
                     st.markdown(f"<span style='font-size:11px;color:#565c6d;'>{pct:.1f}%</span>", unsafe_allow_html=True)
 
             with st.expander("Raw logits"):
-                st.code(json.dumps([round(v, 4) for v in pred["logits"]]), language="json")
+                st.code(json.dumps([round(v, 4) for v in pred.get("logits", [])]), language="json")
 
             st.write("")
+
+
+def post_prediction(path: str, payload: dict):
+    try:
+        response = requests.post(f"{api_base}{path}", json=payload, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as exc:
+        try:
+            detail = exc.response.json().get("detail", str(exc))
+        except ValueError:
+            detail = str(exc)
+        st.error(f"API request failed: {detail}")
+    except requests.exceptions.RequestException as exc:
+        st.error(f"Cannot reach the API at {api_base}: {exc}")
+    return None
 
 
 # ----------------------------------------------------------------------------
@@ -256,21 +273,9 @@ with tab_cora:
             st.error(f"Invalid node indices: {exc}")
         else:
             with st.spinner("Running inference over the Cora graph…"):
-                try:
-                    res = requests.post(
-                        f"{api_base}/predict/cora_node",
-                        json={"node_indices": indices},
-                        timeout=60,
-                    )
-                    res.raise_for_status()
-                    render_predictions(res.json())
-                except requests.exceptions.RequestException as exc:
-                    detail = ""
-                    try:
-                        detail = res.json().get("detail", "")  # type: ignore[possibly-undefined]
-                    except Exception:  # noqa: BLE001
-                        pass
-                    st.error(f"Request failed: {detail or exc}")
+                data = post_prediction("/predict/cora_node", {"node_indices": indices})
+                if data is not None:
+                    render_predictions(data)
 
 with tab_custom:
     st.markdown(f"Submit your own node features (each a vector of **{FEATURE_DIM}** numbers) and optional edges.")
@@ -334,17 +339,9 @@ with tab_custom:
 
             if payload:
                 with st.spinner("Running inference…"):
-                    try:
-                        res = requests.post(f"{api_base}/predict", json=payload, timeout=60)
-                        res.raise_for_status()
-                        render_predictions(res.json())
-                    except requests.exceptions.RequestException as exc:
-                        detail = ""
-                        try:
-                            detail = res.json().get("detail", "")  # type: ignore[possibly-undefined]
-                        except Exception:  # noqa: BLE001
-                            pass
-                        st.error(f"Request failed: {detail or exc}")
+                    data = post_prediction("/predict", payload)
+                    if data is not None:
+                        render_predictions(data)
 
 st.markdown("---")
 st.caption(f"Cora GCN Explorer · talks to `{api_base}` · 7-class topic model over {FEATURE_DIM}-dim bag-of-words features")

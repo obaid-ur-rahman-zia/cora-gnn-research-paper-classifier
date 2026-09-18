@@ -89,7 +89,7 @@ def run_model(node_features: np.ndarray, edge_index: np.ndarray, node_indices_to
         },
     )
     logits = output[0]
-    probabilites = softmax(logits)
+    probabilities = softmax(logits)
     predicted_classes = logits.argmax(axis=-1)
 
     results = []
@@ -98,7 +98,7 @@ def run_model(node_features: np.ndarray, edge_index: np.ndarray, node_indices_to
             "node_index": i,
             "predicted_class_id": int(predicted_classes[i]),
             "predicted_class_name": CORA_CLASSES[int(predicted_classes[i])],
-            "probabilites": probabilites[i].tolist(),
+            "probabilities": probabilities[i].tolist(),
             "logits": logits[i].tolist(),
         })
 

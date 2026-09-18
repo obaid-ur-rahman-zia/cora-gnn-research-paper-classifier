@@ -195,14 +195,17 @@ Each node feature vector must contain exactly 1,433 numeric values. If `edge_ind
 The project also includes a Streamlit dashboard:
 
 ```bash
+pip install -r requirements-streamlit.txt
 streamlit run streamlit_app.py
 ```
 
-By default, the Streamlit app points to a deployed API URL. To use it locally, update the API base URL in the sidebar to:
+Streamlit calls the FastAPI service; the Streamlit process alone does not run the model. To use it locally, install the API dependencies with `pip install -r requirements.txt`, start the API in another terminal with `uvicorn main:app --reload`, and set the sidebar API base URL to:
 
 ```text
 http://127.0.0.1:8000
 ```
+
+The sidebar defaults to the deployed API URL. If that deployment is unavailable, use the local URL above or provide another endpoint with the `CORA_API_BASE_URL` environment variable. Click **Check health** to test the selected URL.
 
 ## Model Notes
 
