@@ -303,14 +303,12 @@ with tab_custom:
 
     features_raw = st.text_area(
         "Node features (JSON array of arrays)",
-        value=st.session_state.get("custom_features", ""),
         height=140,
         key="custom_features",
         placeholder='[[0, 0, 1, ...], [0, 1, 0, ...]]',
     )
     edges_raw = st.text_area(
         "Edge indices — optional, shape [2, num_edges]",
-        value=st.session_state.get("custom_edges", ""),
         height=90,
         key="custom_edges",
         placeholder="[[0, 1, 2], [1, 2, 0]]  (leave blank for self-loops only)",
