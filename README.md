@@ -58,7 +58,7 @@ View ONNX input/output metadata and run a small latency benchmark against the pr
 - FastAPI
 - ONNX Runtime
 - NumPy
-- PyTorch Geometric
+- SciPy (to load the bundled Cora dataset)
 - Streamlit
 - HTML, CSS, JavaScript
 
@@ -128,6 +128,8 @@ If your hosting platform is configured to run the FastAPI CLI, this project also
 ```bash
 fastapi run main.py --host 0.0.0.0 --port $PORT
 ```
+
+Use one worker on a small instance. The API reads the bundled Cora graph once per worker and keeps it in memory; extra workers duplicate both the graph and ONNX model. The deployed API does not install PyTorch or PyTorch Geometric. The training notebook may still require them in a separate environment.
 
 ## API Endpoints
 

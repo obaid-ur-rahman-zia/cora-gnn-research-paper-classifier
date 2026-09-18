@@ -2,6 +2,8 @@
 We are going to create our API now. 
 """
 import os
+import pickle
+from functools import lru_cache
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -26,7 +28,12 @@ MODEL_PATH  = os.path.join(BASE_DIR, 'simple_gcn_cora.onnx')
 DATA_DIR    = os.path.join(BASE_DIR, "data", "Planetoid")
 STATIC_DIR  = os.path.join(BASE_DIR, "static")
 
-model_session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+session_options = ort.SessionOptions()
+session_options.intra_op_num_threads = 1
+session_options.inter_op_num_threads = 1
+model_session = ort.InferenceSession(
+    MODEL_PATH, sess_options=session_options, providers=["CPUExecutionProvider"]
+)
 
 app = FastAPI()
 
@@ -44,6 +51,33 @@ def softmax(scores: np.ndarray):
     shifted = scores - scores.max(axis=1, keepdims=True)
     exp_scores = np.exp(shifted)
     return exp_scores / exp_scores.sum(axis=-1, keepdims=True)
+
+
+@lru_cache(maxsize=1)
+def load_cora_graph():
+    raw_dir = os.path.join(DATA_DIR, "Cora", "raw")
+
+    def read_raw(name):
+        with open(os.path.join(raw_dir, f"ind.cora.{name}"), "rb") as file:
+            return pickle.load(file, encoding="latin1")
+
+    # Match PyTorch Geometric's Planetoid ordering for the bundled Cora files.
+    allx = read_raw("allx")
+    tx = read_raw("tx")
+    graph = read_raw("graph")
+    test_index = np.loadtxt(
+        os.path.join(raw_dir, "ind.cora.test.index"), dtype=np.int64, ndmin=1
+    )
+    features = np.asarray(np.vstack((allx.toarray(), tx.toarray())), dtype=np.float32)
+    features[test_index] = features[np.sort(test_index)]
+
+    edges = np.array(
+        [(source, target) for source, targets in graph.items() for target in targets
+         if source != target],
+        dtype=np.int64,
+    )
+    edges = np.unique(edges, axis=0).T.copy()
+    return features, edges
 
 
 def run_model(node_features: np.ndarray, edge_index: np.ndarray, node_indices_to_return):
@@ -132,13 +166,12 @@ def predict_custom_graph(request: GraphPredictRequest):
 
 @app.post('/predict/cora_node')
 def predict_real_cora_nodes(request: CoraNodeRequest):
-    from torch_geometric.datasets import Planetoid
     try:
-        cora_dataset = Planetoid(root=DATA_DIR, name="Cora")[0]
+        node_features, edge_index = load_cora_graph()
     except Exception as error:
         raise HTTPException(500, f"failed to load cora dataset: {error}")
 
-    largest_valid_index = cora_dataset.num_nodes - 1
+    largest_valid_index = node_features.shape[0] - 1
     invalid_index = [
         i for i in request.node_indices
         if i < 0 or i > largest_valid_index
@@ -149,8 +182,8 @@ def predict_real_cora_nodes(request: CoraNodeRequest):
         )
 
     return run_model(
-        cora_dataset.x.numpy(),
-        cora_dataset.edge_index.numpy(),
+        node_features,
+        edge_index,
         request.node_indices
     )
 
