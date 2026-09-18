@@ -25,23 +25,25 @@ Supported topic classes:
 
 ## UI Screenshots
 
+These screenshots show the current interface with sample API responses for display. The shown confidence values are illustrative, not measured model results.
+
 ### Papers
 
 Select any Cora node index from 0 to 2707 and run GCN inference. The UI shows the predicted topic, confidence score, class probabilities, raw logits, and an illustrative node diagram.
 
-![Cora Benchmark Explorer](docs/screenshots/cora-explorer.png)
+![Cora papers view](docs/screenshots/cora-explorer.png)
 
 ### Custom Graph
 
 Generate or edit a custom citation graph payload, then send it to the API through `POST /predict`.
 
-![Custom Graph Predictor](docs/screenshots/custom-graph-predictor.png)
+![Custom graph view](docs/screenshots/custom-graph-predictor.png)
 
 ### Model and Latency
 
 View ONNX input/output metadata and run a small latency benchmark against the prediction endpoint.
 
-![ONNX Model Benchmark](docs/screenshots/model-benchmark.png)
+![Model and latency view](docs/screenshots/model-benchmark.png)
 
 ## Features
 
